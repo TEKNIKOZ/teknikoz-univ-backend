@@ -1,0 +1,44 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Node modules
+node_modules
+
+# Build files
+dist
+
+# IDE files
+.DS_Store
+.vscode
+.idea
+.cursorrules
+.cursor/*
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Database files
+*.db
+*.db-journal
+
+# Sensitive files
+*-sql-key.json
+*.pem
+*.key
+*.crt
+
+# Temporary files
+tmp
+temp
+.tmp
+docs/*

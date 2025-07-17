@@ -1,0 +1,51 @@
+{
+  "compilerOptions": {
+    "incremental": true,
+    "target": "es2016",
+    "lib": [
+      "es2016",
+      "dom"
+    ],
+    "module": "commonjs",
+    "rootDir": "./",
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    },
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "removeComments": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "index.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "ts-node": {
+    "files": true,
+    "require": [
+      "tsconfig-paths/register"
+    ]
+  }
+}
