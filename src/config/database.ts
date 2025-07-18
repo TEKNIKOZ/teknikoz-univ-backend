@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
@@ -9,8 +10,21 @@ export const supabaseConfig = {
   serviceKey: process.env.SUPABASE_SERVICE_KEY || ''
 };
 
-// TODO: Initialize Supabase client when we install the library
-// import { createClient } from '@supabase/supabase-js';
-// export const supabase = createClient(supabaseConfig.url, supabaseConfig.serviceKey);
+// Initialize Supabase client
+export const supabase = createClient(supabaseConfig.url, supabaseConfig.serviceKey);
+
+// Test database connection
+const testConnection = async () => {
+  try {
+    const { data, error } = await supabase.from('contacts').select('count').limit(1);
+    if (error) throw error;
+    console.log('✅ Supabase database connection successful');
+  } catch (error) {
+    console.error('❌ Supabase database connection failed:', error);
+  }
+};
+
+// Test connection on startup
+testConnection();
 
 console.log('Supabase configuration loaded');
