@@ -1,60 +1,68 @@
 import express from 'express';
-import { BrochureRequestController } from '@/controllers/brochureController';
+import * as brochureController from '@/controllers/brochureController';
 import { validateRequest, validateParams, validateQuery } from '@/middlewares/validation';
+import { brochureRequestSchema, brochureIdSchema } from '@/schemas/brochureSchema';
+import { contactIdSchema, queryParamsSchema } from '@/schemas/contactSchema';
 import {
-  brochureRequestSchema,
-  brochureIdSchema,
-  contactIdSchema,
-  queryParamsSchema
-} from '@/schemas/contactSchemas';
+  brochureRequestRateLimit,
+  generalApiRateLimit,
+  adminRateLimit
+} from '@/middlewares/rateLimiting';
 
 const router = express.Router();
-const brochureRequestController = new BrochureRequestController();
 
-// POST /api/brochure-requests - Create a new brochure request
+// POST /api/brochure-requests - Create a new brochure request (rate limited)
 router.post('/',
+  brochureRequestRateLimit,
   validateRequest(brochureRequestSchema),
-  brochureRequestController.requestBrochure
+  brochureController.requestBrochure
 );
 
-// GET /api/brochure-requests - Get all brochure requests with optional filtering
+// GET /api/brochure-requests - Get all brochure requests with optional filtering (admin)
 router.get('/',
+  adminRateLimit,
   validateQuery(queryParamsSchema),
-  brochureRequestController.getBrochureRequests
+  brochureController.getBrochureRequests
 );
 
-// GET /api/brochure-requests/pending/email-delivery - Get pending email deliveries
+// GET /api/brochure-requests/pending/email-delivery - Get pending email deliveries (admin)
 router.get('/pending/email-delivery',
-  brochureRequestController.getPendingEmailDeliveries
+  adminRateLimit,
+  brochureController.getPendingEmailDeliveries
 );
 
-// GET /api/brochure-requests/stats/email-delivery - Get email delivery stats
+// GET /api/brochure-requests/stats/email-delivery - Get email delivery stats (admin)
 router.get('/stats/email-delivery',
-  brochureRequestController.getEmailDeliveryStats
+  adminRateLimit,
+  brochureController.getEmailDeliveryStats
 );
 
-// GET /api/brochure-requests/contact/:contactId - Get brochure requests by contact ID
+// GET /api/brochure-requests/contact/:contactId - Get brochure requests by contact ID (general)
 router.get('/contact/:contactId',
+  generalApiRateLimit,
   validateParams(contactIdSchema),
-  brochureRequestController.getBrochureRequestsByContact
+  brochureController.getBrochureRequestsByContact
 );
 
-// GET /api/brochure-requests/:id - Get brochure request by ID
+// GET /api/brochure-requests/:id - Get brochure request by ID (general)
 router.get('/:id',
+  generalApiRateLimit,
   validateParams(brochureIdSchema),
-  brochureRequestController.getBrochureRequestById
+  brochureController.getBrochureRequestById
 );
 
-// POST /api/brochure-requests/:id/resend - Resend brochure email
+// POST /api/brochure-requests/:id/resend - Resend brochure email (admin)
 router.post('/:id/resend',
+  adminRateLimit,
   validateParams(brochureIdSchema),
-  brochureRequestController.resendBrochure
+  brochureController.resendBrochure
 );
 
-// DELETE /api/brochure-requests/:id - Delete brochure request
+// DELETE /api/brochure-requests/:id - Delete brochure request (admin)
 router.delete('/:id',
+  adminRateLimit,
   validateParams(brochureIdSchema),
-  brochureRequestController.deleteBrochureRequest
+  brochureController.deleteBrochureRequest
 );
 
 export default router;
