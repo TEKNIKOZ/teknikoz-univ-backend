@@ -2,98 +2,92 @@ import { Resend } from 'resend';
 import { logger } from '@/utils/logger';
 import { Contact, BrochureRequest } from '@/types/database';
 
-export class EmailService {
-  private resend: Resend;
-  private fromEmail: string;
-  private adminEmail: string;
+// Email service configuration
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@teknikoz.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@teknikoz.com';
 
-  constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
-    this.fromEmail = process.env.FROM_EMAIL || 'noreply@teknikoz.com';
-    this.adminEmail = process.env.ADMIN_EMAIL || 'admin@teknikoz.com';
-  }
+export async function sendContactConfirmation(contact: Contact): Promise<void> {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [contact.email],
+      subject: 'Thank you for contacting Teknikoz University',
+      html: getContactConfirmationTemplate(contact)
+    });
 
-  async sendContactConfirmation(contact: Contact): Promise<void> {
-    try {
-      const { data, error } = await this.resend.emails.send({
-        from: this.fromEmail,
-        to: [contact.email],
-        subject: 'Thank you for contacting Teknikoz University',
-        html: this.getContactConfirmationTemplate(contact)
-      });
-
-      if (error) {
-        throw new Error(`Failed to send confirmation email: ${error.message}`);
-      }
-
-      logger.info(`Contact confirmation email sent to ${contact.email}`, { emailId: data?.id });
-    } catch (error) {
-      logger.error('Failed to send contact confirmation email', { error, contact: contact.email });
-      throw error;
+    if (error) {
+      throw new Error(`Failed to send confirmation email: ${error.message}`);
     }
+
+    logger.info(`Contact confirmation email sent to ${contact.email}`, { emailId: data?.id });
+  } catch (error) {
+    logger.error('Failed to send contact confirmation email', { error, contact: contact.email });
+    throw error;
   }
+}
 
-  async sendBrochureEmail(contact: Contact, brochureRequest: BrochureRequest): Promise<void> {
-    try {
-      const brochureUrl = this.getBrochureUrl(brochureRequest.brochure_name);
-      
-      const { data, error } = await this.resend.emails.send({
-        from: this.fromEmail,
-        to: [contact.email],
-        subject: `Your ${brochureRequest.course_type} Course Brochure - Teknikoz University`,
-        html: this.getBrochureEmailTemplate(contact, brochureRequest),
-        attachments: [
-          {
-            filename: brochureRequest.brochure_name,
-            path: brochureUrl
-          }
-        ]
-      });
+export async function sendBrochureEmail(contact: Contact, brochureRequest: BrochureRequest): Promise<void> {
+  try {
+    const brochureUrl = getBrochureUrl(brochureRequest.brochure_name);
 
-      if (error) {
-        throw new Error(`Failed to send brochure email: ${error.message}`);
-      }
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [contact.email],
+      subject: `Your ${brochureRequest.course_type} Course Brochure - Teknikoz University`,
+      html: getBrochureEmailTemplate(contact, brochureRequest),
+      attachments: [
+        {
+          filename: brochureRequest.brochure_name,
+          path: brochureUrl
+        }
+      ]
+    });
 
-      logger.info(`Brochure email sent to ${contact.email}`, { 
-        emailId: data?.id,
-        courseType: brochureRequest.course_type
-      });
-    } catch (error) {
-      logger.error('Failed to send brochure email', { 
-        error, 
-        contact: contact.email, 
-        courseType: brochureRequest.course_type 
-      });
-      throw error;
+    if (error) {
+      throw new Error(`Failed to send brochure email: ${error.message}`);
     }
+
+    logger.info(`Brochure email sent to ${contact.email}`, {
+      emailId: data?.id,
+      courseType: brochureRequest.course_type
+    });
+  } catch (error) {
+    logger.error('Failed to send brochure email', {
+      error,
+      contact: contact.email,
+      courseType: brochureRequest.course_type
+    });
+    throw error;
   }
+}
 
-  async sendAdminNotification(contact: Contact, type: 'contact' | 'brochure'): Promise<void> {
-    try {
-      const subject = type === 'contact' 
-        ? 'New Contact Form Submission' 
-        : 'New Brochure Request';
+export async function sendAdminNotification(contact: Contact, type: 'contact' | 'brochure'): Promise<void> {
+  try {
+    const subject = type === 'contact'
+      ? 'New Contact Form Submission'
+      : 'New Brochure Request';
 
-      const { data, error } = await this.resend.emails.send({
-        from: this.fromEmail,
-        to: [this.adminEmail],
-        subject: `${subject} - Teknikoz University`,
-        html: this.getAdminNotificationTemplate(contact, type)
-      });
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [ADMIN_EMAIL],
+      subject: `${subject} - Teknikoz University`,
+      html: getAdminNotificationTemplate(contact, type)
+    });
 
-      if (error) {
-        throw new Error(`Failed to send admin notification: ${error.message}`);
-      }
-
-      logger.info(`Admin notification sent for ${type} from ${contact.email}`, { emailId: data?.id });
-    } catch (error) {
-      logger.error('Failed to send admin notification', { error, contact: contact.email, type });
-      throw error;
+    if (error) {
+      throw new Error(`Failed to send admin notification: ${error.message}`);
     }
-  }
 
-  private getContactConfirmationTemplate(contact: Contact): string {
-    return `
+    logger.info(`Admin notification sent for ${type} from ${contact.email}`, { emailId: data?.id });
+  } catch (error) {
+    logger.error('Failed to send admin notification', { error, contact: contact.email, type });
+    throw error;
+  }
+}
+
+function getContactConfirmationTemplate(contact: Contact): string {
+  return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -125,10 +119,10 @@ export class EmailService {
       </body>
       </html>
     `;
-  }
+}
 
-  private getBrochureEmailTemplate(contact: Contact, brochureRequest: BrochureRequest): string {
-    return `
+function getBrochureEmailTemplate(contact: Contact, brochureRequest: BrochureRequest): string {
+  return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -167,10 +161,10 @@ export class EmailService {
       </body>
       </html>
     `;
-  }
+}
 
-  private getAdminNotificationTemplate(contact: Contact, type: 'contact' | 'brochure'): string {
-    return `
+function getAdminNotificationTemplate(contact: Contact, type: 'contact' | 'brochure'): string {
+  return `
       <!DOCTYPE html>
       <html>
       <head>
@@ -203,11 +197,10 @@ export class EmailService {
       </body>
       </html>
     `;
-  }
+}
 
-  private getBrochureUrl(brochureName: string): string {
-    // This would typically be a Supabase Storage URL
-    // For now, we'll use a placeholder
-    return `${process.env.SUPABASE_URL}/storage/v1/object/public/brochures/${brochureName}`;
-  }
+function getBrochureUrl(brochureName: string): string {
+  // This would typically be a Supabase Storage URL
+  // For now, we'll use a placeholder
+  return `${process.env.SUPABASE_URL}/storage/v1/object/public/brochures/${brochureName}`;
 }

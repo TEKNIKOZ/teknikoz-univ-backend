@@ -1,6 +1,7 @@
 import express, { Router } from 'express';
 import contactRoutes from './contactRoutes';
 import brochureRoutes from './brochureRoutes';
+import authRoutes from './authRoutes';
 
 const router: Router = express.Router();
 
@@ -21,6 +22,7 @@ router.get("/health", (req, res) => {
 });
 
 
+router.use('/auth', authRoutes);
 router.use('/contacts', contactRoutes);
 router.use('/brochure-requests', brochureRoutes);
 

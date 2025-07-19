@@ -92,3 +92,41 @@ export const validateQuery = (schema: z.ZodSchema) => {
     }
   };
 };
+
+export const validate = (schema: z.ZodSchema) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const validatedData = schema.parse({
+        body: req.body,
+        params: req.params,
+        query: req.query,
+        cookies: req.cookies
+      });
+      
+      if (validatedData.body) req.body = validatedData.body;
+      if (validatedData.params) req.params = validatedData.params;
+      if (validatedData.query) req.query = validatedData.query;
+      
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const validationErrors: ValidationError[] = error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }));
+
+        res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: validationErrors
+        });
+        return;
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error during validation'
+      });
+    }
+  };
+};
