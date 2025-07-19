@@ -1,13 +1,12 @@
 import { Request, Response } from 'express';
-import { ContactRepository } from '@/repositories/ContactRepository';
-import { BrochureRequestRepository } from '@/repositories/BrochureRequestRepository';
+import { ContactRepository } from '@/repositories/contactRepository';
+import { BrochureRequestRepository } from '@/repositories/brochureRequestRepository';
 import { EmailService } from '@/services/EmailService';
 import { asyncHandler, createError } from '@/middlewares/errorHandler';
-import { AuditedRequest } from '@/middlewares/audit';
 import { logger } from '@/utils/logger';
 import { BrochureRequestInput, QueryParamsInput } from '@/schemas/contactSchemas';
 
-export class BrochureController {
+export class BrochureRequestController {
   private contactRepository: ContactRepository;
   private brochureRepository: BrochureRequestRepository;
   private emailService: EmailService;
@@ -18,7 +17,7 @@ export class BrochureController {
     this.emailService = new EmailService();
   }
 
-  requestBrochure = asyncHandler(async (req: AuditedRequest, res: Response) => {
+  requestBrochure = asyncHandler(async (req: Request, res: Response) => {
     const brochureData: BrochureRequestInput = req.body;
 
     try {
@@ -73,7 +72,7 @@ export class BrochureController {
 
     try {
       let brochureRequests;
-      
+
       if (course_type) {
         brochureRequests = await this.brochureRepository.findByCourseType(course_type, limit);
       } else {
@@ -139,13 +138,13 @@ export class BrochureController {
 
     try {
       const brochureRequest = await this.brochureRepository.findById(id);
-      
+
       if (!brochureRequest) {
         throw createError('Brochure request not found', 404);
       }
 
       const contact = await this.contactRepository.findById(brochureRequest.contact_id);
-      
+
       if (!contact) {
         throw createError('Contact not found', 404);
       }
@@ -208,7 +207,7 @@ export class BrochureController {
 
     try {
       const brochureRequest = await this.brochureRepository.findById(id);
-      
+
       if (!brochureRequest) {
         throw createError('Brochure request not found', 404);
       }

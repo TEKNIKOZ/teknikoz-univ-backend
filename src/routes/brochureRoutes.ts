@@ -1,71 +1,60 @@
 import express from 'express';
-import { BrochureController } from '@/controllers/BrochureController';
+import { BrochureRequestController } from '@/controllers/brochureController';
 import { validateRequest, validateParams, validateQuery } from '@/middlewares/validation';
-import { requireAdmin, optionalAuth } from '@/middlewares/auth';
-import { auditMiddleware } from '@/middlewares/audit';
-import { 
-  brochureRequestSchema, 
-  brochureIdSchema, 
-  contactIdSchema, 
-  queryParamsSchema 
+import {
+  brochureRequestSchema,
+  brochureIdSchema,
+  contactIdSchema,
+  queryParamsSchema
 } from '@/schemas/contactSchemas';
 
 const router = express.Router();
-const brochureController = new BrochureController();
+const brochureRequestController = new BrochureRequestController();
 
 // POST /api/brochure-requests - Create a new brochure request
-router.post('/', 
-  optionalAuth,
-  auditMiddleware,
-  validateRequest(brochureRequestSchema), 
-  brochureController.requestBrochure
+router.post('/',
+  validateRequest(brochureRequestSchema),
+  brochureRequestController.requestBrochure
 );
 
-// GET /api/brochure-requests - Get all brochure requests with optional filtering (Admin only)
-router.get('/', 
-  requireAdmin,
-  validateQuery(queryParamsSchema), 
-  brochureController.getBrochureRequests
+// GET /api/brochure-requests - Get all brochure requests with optional filtering
+router.get('/',
+  validateQuery(queryParamsSchema),
+  brochureRequestController.getBrochureRequests
 );
 
-// GET /api/brochure-requests/:id - Get brochure request by ID (Admin only)
-router.get('/:id', 
-  requireAdmin,
-  validateParams(brochureIdSchema), 
-  brochureController.getBrochureRequestById
+// GET /api/brochure-requests/pending/email-delivery - Get pending email deliveries
+router.get('/pending/email-delivery',
+  brochureRequestController.getPendingEmailDeliveries
 );
 
-// GET /api/brochure-requests/contact/:contactId - Get brochure requests by contact ID (Admin only)
-router.get('/contact/:contactId', 
-  requireAdmin,
-  validateParams(contactIdSchema), 
-  brochureController.getBrochureRequestsByContact
+// GET /api/brochure-requests/stats/email-delivery - Get email delivery stats
+router.get('/stats/email-delivery',
+  brochureRequestController.getEmailDeliveryStats
 );
 
-// POST /api/brochure-requests/:id/resend - Resend brochure email (Admin only)
-router.post('/:id/resend', 
-  requireAdmin,
-  validateParams(brochureIdSchema), 
-  brochureController.resendBrochure
+// GET /api/brochure-requests/contact/:contactId - Get brochure requests by contact ID
+router.get('/contact/:contactId',
+  validateParams(contactIdSchema),
+  brochureRequestController.getBrochureRequestsByContact
 );
 
-// GET /api/brochure-requests/pending/email-delivery - Get pending email deliveries (Admin only)
-router.get('/pending/email-delivery', 
-  requireAdmin,
-  brochureController.getPendingEmailDeliveries
+// GET /api/brochure-requests/:id - Get brochure request by ID
+router.get('/:id',
+  validateParams(brochureIdSchema),
+  brochureRequestController.getBrochureRequestById
 );
 
-// GET /api/brochure-requests/stats/email-delivery - Get email delivery stats (Admin only)
-router.get('/stats/email-delivery', 
-  requireAdmin,
-  brochureController.getEmailDeliveryStats
+// POST /api/brochure-requests/:id/resend - Resend brochure email
+router.post('/:id/resend',
+  validateParams(brochureIdSchema),
+  brochureRequestController.resendBrochure
 );
 
-// DELETE /api/brochure-requests/:id - Delete brochure request (Admin only)
-router.delete('/:id', 
-  requireAdmin,
-  validateParams(brochureIdSchema), 
-  brochureController.deleteBrochureRequest
+// DELETE /api/brochure-requests/:id - Delete brochure request
+router.delete('/:id',
+  validateParams(brochureIdSchema),
+  brochureRequestController.deleteBrochureRequest
 );
 
 export default router;

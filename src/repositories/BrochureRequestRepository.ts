@@ -1,122 +1,101 @@
-import { supabase } from '@/config/database';
+import { database } from '@/config/database';
 import { BrochureRequest, BrochureRequestCreateInput } from '@/types/database';
 
 export class BrochureRequestRepository {
   async create(brochureData: BrochureRequestCreateInput): Promise<BrochureRequest> {
-    const { data, error } = await supabase
-      .from('brochure_requests')
-      .insert([brochureData])
-      .select()
-      .single();
+    const { contact_id, course_type, brochure_name, created_by } = brochureData;
+    const query = `
+      INSERT INTO brochure_requests (contact_id, course_type, brochure_name, created_by)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `;
 
-    if (error) {
-      throw new Error(`Failed to create brochure request: ${error.message}`);
+    try {
+      const result = await database.query(query, [contact_id, course_type, brochure_name, created_by]);
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Failed to create brochure request: ${(error as Error).message}`);
     }
-
-    return data;
   }
 
   async findById(id: string): Promise<BrochureRequest | null> {
-    const { data, error } = await supabase
-      .from('brochure_requests')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const query = 'SELECT * FROM brochure_requests WHERE id = $1';
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      throw new Error(`Failed to find brochure request: ${error.message}`);
+    try {
+      const result = await database.query(query, [id]);
+      return result.rows[0] || null;
+    } catch (error) {
+      throw new Error(`Failed to find brochure request: ${(error as Error).message}`);
     }
-
-    return data;
   }
 
   async findByContactId(contactId: string): Promise<BrochureRequest[]> {
-    const { data, error } = await supabase
-      .from('brochure_requests')
-      .select('*')
-      .eq('contact_id', contactId)
-      .order('created_at', { ascending: false });
+    const query = 'SELECT * FROM brochure_requests WHERE contact_id = $1 ORDER BY created_at DESC';
 
-    if (error) {
-      throw new Error(`Failed to find brochure requests by contact: ${error.message}`);
+    try {
+      const result = await database.query(query, [contactId]);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Failed to find brochure requests by contact: ${(error as Error).message}`);
     }
-
-    return data || [];
   }
 
   async findAll(limit: number = 100, offset: number = 0): Promise<BrochureRequest[]> {
-    const { data, error } = await supabase
-      .from('brochure_requests')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    const query = 'SELECT * FROM brochure_requests ORDER BY created_at DESC LIMIT $1 OFFSET $2';
 
-    if (error) {
-      throw new Error(`Failed to fetch brochure requests: ${error.message}`);
+    try {
+      const result = await database.query(query, [limit, offset]);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Failed to fetch brochure requests: ${(error as Error).message}`);
     }
-
-    return data || [];
   }
 
   async findByCourseType(courseType: string, limit: number = 100): Promise<BrochureRequest[]> {
-    const { data, error } = await supabase
-      .from('brochure_requests')
-      .select('*')
-      .eq('course_type', courseType)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const query = 'SELECT * FROM brochure_requests WHERE course_type = $1 ORDER BY created_at DESC LIMIT $2';
 
-    if (error) {
-      throw new Error(`Failed to fetch brochure requests by course type: ${error.message}`);
+    try {
+      const result = await database.query(query, [courseType, limit]);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Failed to fetch brochure requests by course type: ${(error as Error).message}`);
     }
-
-    return data || [];
   }
 
   async findPendingEmailDelivery(limit: number = 50): Promise<BrochureRequest[]> {
-    const { data, error } = await supabase
-      .from('brochure_requests')
-      .select('*')
-      .eq('email_sent', false)
-      .order('created_at', { ascending: true })
-      .limit(limit);
+    const query = 'SELECT * FROM brochure_requests WHERE email_sent = false ORDER BY created_at ASC LIMIT $1';
 
-    if (error) {
-      throw new Error(`Failed to fetch pending email deliveries: ${error.message}`);
+    try {
+      const result = await database.query(query, [limit]);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Failed to fetch pending email deliveries: ${(error as Error).message}`);
     }
-
-    return data || [];
   }
 
   async markEmailSent(id: string): Promise<BrochureRequest> {
-    const { data, error } = await supabase
-      .from('brochure_requests')
-      .update({ 
-        email_sent: true, 
-        email_sent_at: new Date().toISOString() 
-      })
-      .eq('id', id)
-      .select()
-      .single();
+    const query = `
+      UPDATE brochure_requests 
+      SET email_sent = true, email_sent_at = NOW() 
+      WHERE id = $1 
+      RETURNING *
+    `;
 
-    if (error) {
-      throw new Error(`Failed to mark email as sent: ${error.message}`);
+    try {
+      const result = await database.query(query, [id]);
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Failed to mark email as sent: ${(error as Error).message}`);
     }
-
-    return data;
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('brochure_requests')
-      .delete()
-      .eq('id', id);
+    const query = 'DELETE FROM brochure_requests WHERE id = $1';
 
-    if (error) {
-      throw new Error(`Failed to delete brochure request: ${error.message}`);
+    try {
+      await database.query(query, [id]);
+    } catch (error) {
+      throw new Error(`Failed to delete brochure request: ${(error as Error).message}`);
     }
   }
 
@@ -125,23 +104,24 @@ export class BrochureRequestRepository {
     sent: number;
     pending: number;
   }> {
-    const { data: totalData, error: totalError } = await supabase
-      .from('brochure_requests')
-      .select('id', { count: 'exact' });
+    const query = `
+      SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN email_sent = true THEN 1 END) as sent,
+        COUNT(CASE WHEN email_sent = false THEN 1 END) as pending
+      FROM brochure_requests
+    `;
 
-    const { data: sentData, error: sentError } = await supabase
-      .from('brochure_requests')
-      .select('id', { count: 'exact' })
-      .eq('email_sent', true);
-
-    if (totalError || sentError) {
-      throw new Error('Failed to fetch email delivery stats');
+    try {
+      const result = await database.query(query);
+      const stats = result.rows[0];
+      return {
+        total: parseInt(stats.total),
+        sent: parseInt(stats.sent),
+        pending: parseInt(stats.pending)
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch email delivery stats: ${(error as Error).message}`);
     }
-
-    const total = totalData?.length || 0;
-    const sent = sentData?.length || 0;
-    const pending = total - sent;
-
-    return { total, sent, pending };
   }
 }

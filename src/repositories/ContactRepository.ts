@@ -1,104 +1,90 @@
-import { supabase } from '@/config/database';
+import { database } from '@/config/database';
 import { Contact, ContactCreateInput } from '@/types/database';
 
 export class ContactRepository {
   async create(contactData: ContactCreateInput): Promise<Contact> {
-    const { data, error } = await supabase
-      .from('contacts')
-      .insert([contactData])
-      .select()
-      .single();
+    const { name, email, phone, course_interest, message, form_type, created_by } = contactData;
+    const query = `
+      INSERT INTO contacts (name, email, phone, course_interest, message, form_type, created_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `;
 
-    if (error) {
-      throw new Error(`Failed to create contact: ${error.message}`);
+    try {
+      const result = await database.query(query, [name, email, phone, course_interest, message, form_type, created_by]);
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Failed to create contact: ${(error as Error).message}`);
     }
-
-    return data;
   }
 
   async findById(id: string): Promise<Contact | null> {
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const query = 'SELECT * FROM contacts WHERE id = $1';
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      throw new Error(`Failed to find contact: ${error.message}`);
+    try {
+      const result = await database.query(query, [id]);
+      return result.rows[0] || null;
+    } catch (error) {
+      throw new Error(`Failed to find contact: ${(error as Error).message}`);
     }
-
-    return data;
   }
 
   async findByEmail(email: string): Promise<Contact[]> {
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('email', email)
-      .order('created_at', { ascending: false });
+    const query = 'SELECT * FROM contacts WHERE email = $1 ORDER BY created_at DESC';
 
-    if (error) {
-      throw new Error(`Failed to find contacts by email: ${error.message}`);
+    try {
+      const result = await database.query(query, [email]);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Failed to find contacts by email: ${(error as Error).message}`);
     }
-
-    return data || [];
   }
 
   async findAll(limit: number = 100, offset: number = 0): Promise<Contact[]> {
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    const query = 'SELECT * FROM contacts ORDER BY created_at DESC LIMIT $1 OFFSET $2';
 
-    if (error) {
-      throw new Error(`Failed to fetch contacts: ${error.message}`);
+    try {
+      const result = await database.query(query, [limit, offset]);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Failed to fetch contacts: ${(error as Error).message}`);
     }
-
-    return data || [];
   }
 
   async findByFormType(formType: 'contact' | 'brochure', limit: number = 100): Promise<Contact[]> {
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('form_type', formType)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const query = 'SELECT * FROM contacts WHERE form_type = $1 ORDER BY created_at DESC LIMIT $2';
 
-    if (error) {
-      throw new Error(`Failed to fetch contacts by form type: ${error.message}`);
+    try {
+      const result = await database.query(query, [formType, limit]);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Failed to fetch contacts by form type: ${(error as Error).message}`);
     }
-
-    return data || [];
   }
 
   async updateMessage(id: string, message: string): Promise<Contact> {
-    const { data, error } = await supabase
-      .from('contacts')
-      .update({ message, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
+    const query = `
+      UPDATE contacts 
+      SET message = $1, updated_at = NOW() 
+      WHERE id = $2 
+      RETURNING *
+    `;
 
-    if (error) {
-      throw new Error(`Failed to update contact: ${error.message}`);
+    try {
+      const result = await database.query(query, [message, id]);
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Failed to update contact: ${(error as Error).message}`);
     }
-
-    return data;
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('contacts')
-      .delete()
-      .eq('id', id);
+    const query = 'DELETE FROM contacts WHERE id = $1';
 
-    if (error) {
-      throw new Error(`Failed to delete contact: ${error.message}`);
+    try {
+      await database.query(query, [id]);
+    } catch (error) {
+      throw new Error(`Failed to delete contact: ${(error as Error).message}`);
     }
   }
 }

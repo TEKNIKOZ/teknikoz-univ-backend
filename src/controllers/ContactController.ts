@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { ContactRepository } from '@/repositories/ContactRepository';
+import { ContactRepository } from '@/repositories/contactRepository';
 import { EmailService } from '@/services/EmailService';
 import { asyncHandler, createError } from '@/middlewares/errorHandler';
-import { AuditedRequest } from '@/middlewares/audit';
 import { logger } from '@/utils/logger';
 import { ContactFormInput, QueryParamsInput } from '@/schemas/contactSchemas';
 
@@ -15,7 +14,7 @@ export class ContactController {
     this.emailService = new EmailService();
   }
 
-  createContact = asyncHandler(async (req: AuditedRequest, res: Response) => {
+  createContact = asyncHandler(async (req: Request, res: Response) => {
     const contactData: ContactFormInput = req.body;
 
     try {
@@ -56,7 +55,7 @@ export class ContactController {
 
     try {
       let contacts;
-      
+
       if (form_type) {
         contacts = await this.contactRepository.findByFormType(form_type, limit);
       } else {
@@ -117,7 +116,7 @@ export class ContactController {
     }
   });
 
-  updateContact = asyncHandler(async (req: AuditedRequest, res: Response) => {
+  updateContact = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const { message } = req.body;
 
@@ -127,7 +126,7 @@ export class ContactController {
 
     try {
       const contact = await this.contactRepository.findById(id);
-      
+
       if (!contact) {
         throw createError('Contact not found', 404);
       }
@@ -155,7 +154,7 @@ export class ContactController {
 
     try {
       const contact = await this.contactRepository.findById(id);
-      
+
       if (!contact) {
         throw createError('Contact not found', 404);
       }

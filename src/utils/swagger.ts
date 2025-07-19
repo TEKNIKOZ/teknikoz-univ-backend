@@ -12,18 +12,6 @@ export const swaggerDocument = {
     },
   ],
   components: {
-    securitySchemes: {
-      cookieAuth: {
-        type: 'apiKey',
-        in: 'cookie',
-        name: 'better-auth.session_token',
-      },
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
-    },
     schemas: {
       Contact: {
         type: 'object',
@@ -186,8 +174,7 @@ export const swaggerDocument = {
       },
       get: {
         tags: ['Contacts'],
-        summary: 'Get all contacts (Admin only)',
-        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Get all contacts',
         parameters: [
           {
             name: 'limit',
@@ -231,30 +218,13 @@ export const swaggerDocument = {
               },
             },
           },
-          '401': {
-            description: 'Authentication required',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/Error' },
-              },
-            },
-          },
-          '403': {
-            description: 'Insufficient permissions',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/Error' },
-              },
-            },
-          },
         },
       },
     },
     '/contacts/{id}': {
       get: {
         tags: ['Contacts'],
-        summary: 'Get contact by ID (Admin only)',
-        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Get contact by ID',
         parameters: [
           {
             name: 'id',
@@ -321,8 +291,7 @@ export const swaggerDocument = {
       },
       get: {
         tags: ['Brochure Requests'],
-        summary: 'Get all brochure requests (Admin only)',
-        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Get all brochure requests',
         parameters: [
           {
             name: 'limit',
@@ -372,8 +341,7 @@ export const swaggerDocument = {
     '/brochure-requests/stats/email-delivery': {
       get: {
         tags: ['Brochure Requests'],
-        summary: 'Get email delivery statistics (Admin only)',
-        security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+        summary: 'Get email delivery statistics',
         responses: {
           '200': {
             description: 'Email delivery statistics',
@@ -395,188 +363,6 @@ export const swaggerDocument = {
                 },
               },
             },
-          },
-        },
-      },
-    },
-    '/auth/sign-up': {
-      post: {
-        tags: ['Authentication'],
-        summary: 'Create a new user account',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['email', 'password', 'name'],
-                properties: {
-                  email: { type: 'string', format: 'email' },
-                  password: { type: 'string', minLength: 8 },
-                  name: { type: 'string' },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          '201': {
-            description: 'User created successfully',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    user: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        email: { type: 'string' },
-                        name: { type: 'string' },
-                        role: { type: 'string', default: 'user' },
-                        isActive: { type: 'boolean', default: true },
-                        createdAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                    session: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        userId: { type: 'string' },
-                        expiresAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '400': {
-            description: 'Validation error or user already exists',
-          },
-        },
-      },
-    },
-    '/auth/sign-in': {
-      post: {
-        tags: ['Authentication'],
-        summary: 'Sign in to existing account',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['email', 'password'],
-                properties: {
-                  email: { type: 'string', format: 'email' },
-                  password: { type: 'string' },
-                  rememberMe: { type: 'boolean', default: false },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          '200': {
-            description: 'Sign in successful',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    user: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        email: { type: 'string' },
-                        name: { type: 'string' },
-                        role: { type: 'string' },
-                        isActive: { type: 'boolean' },
-                        lastLoginAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                    session: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        userId: { type: 'string' },
-                        expiresAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '401': {
-            description: 'Invalid credentials',
-          },
-        },
-      },
-    },
-    '/auth/sign-out': {
-      post: {
-        tags: ['Authentication'],
-        summary: 'Sign out of current session',
-        security: [{ cookieAuth: [] }],
-        responses: {
-          '200': {
-            description: 'Sign out successful',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    success: { type: 'boolean', example: true },
-                    message: { type: 'string', example: 'Signed out successfully' },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-    '/auth/session': {
-      get: {
-        tags: ['Authentication'],
-        summary: 'Get current session information',
-        security: [{ cookieAuth: [] }],
-        responses: {
-          '200': {
-            description: 'Current session information',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    user: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        email: { type: 'string' },
-                        name: { type: 'string' },
-                        role: { type: 'string' },
-                        isActive: { type: 'boolean' },
-                        lastLoginAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                    session: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        userId: { type: 'string' },
-                        expiresAt: { type: 'string', format: 'date-time' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          '401': {
-            description: 'Not authenticated',
           },
         },
       },

@@ -44,7 +44,7 @@ app.use(cors({
 // Request logging
 app.use(requestLogger);
 
-// Cookie parser (needed for auth)
+// Cookie parser
 app.use(cookieParser());
 
 const PORT = process.env.PORT || 8080;
