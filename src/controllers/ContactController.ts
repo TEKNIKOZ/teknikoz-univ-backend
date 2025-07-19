@@ -1,178 +1,170 @@
 import { Request, Response } from 'express';
-import { ContactRepository } from '@/repositories/contactRepository';
-import { EmailService } from '@/services/EmailService';
+import * as contactRepository from '@/repositories/contactRepository';
+import * as emailService from '@/services/emailService';
 import { asyncHandler, createError } from '@/middlewares/errorHandler';
 import { logger } from '@/utils/logger';
-import { ContactFormInput, QueryParamsInput } from '@/schemas/contactSchemas';
+import { ContactFormInput, QueryParamsInput } from '@/schemas/contactSchema';
 
-export class ContactController {
-  private contactRepository: ContactRepository;
-  private emailService: EmailService;
+export const createContact = asyncHandler(async (req: Request, res: Response) => {
+  const contactData: ContactFormInput = req.body;
 
-  constructor() {
-    this.contactRepository = new ContactRepository();
-    this.emailService = new EmailService();
-  }
+  try {
+    // Create contact in database
+    const contact = await contactRepository.create(contactData);
 
-  createContact = asyncHandler(async (req: Request, res: Response) => {
-    const contactData: ContactFormInput = req.body;
+    // Send confirmation email to user
+    await emailService.sendContactConfirmation(contact);
 
-    try {
-      // Create contact in database
-      const contact = await this.contactRepository.create(contactData);
+    // Send notification to admin
+    await emailService.sendAdminNotification(contact, 'contact');
 
-      // Send confirmation email to user
-      await this.emailService.sendContactConfirmation(contact);
+    logger.info('Contact form submitted successfully', {
+      contactId: contact.id,
+      email: contact.email,
+      courseInterest: contact.course_interest
+    });
 
-      // Send notification to admin
-      await this.emailService.sendAdminNotification(contact, 'contact');
-
-      logger.info('Contact form submitted successfully', {
-        contactId: contact.id,
+    res.status(201).json({
+      success: true,
+      message: 'Contact form submitted successfully',
+      data: {
+        id: contact.id,
+        name: contact.name,
         email: contact.email,
-        courseInterest: contact.course_interest
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'Contact form submitted successfully',
-        data: {
-          id: contact.id,
-          name: contact.name,
-          email: contact.email,
-          course_interest: contact.course_interest,
-          created_at: contact.created_at
-        }
-      });
-    } catch (error) {
-      logger.error('Failed to process contact form', { error, contactData });
-      throw createError('Failed to submit contact form', 500);
-    }
-  });
-
-  getContacts = asyncHandler(async (req: Request, res: Response) => {
-    const { limit, offset, form_type }: QueryParamsInput = req.query as any;
-
-    try {
-      let contacts;
-
-      if (form_type) {
-        contacts = await this.contactRepository.findByFormType(form_type, limit);
-      } else {
-        contacts = await this.contactRepository.findAll(limit, offset);
+        course_interest: contact.course_interest,
+        created_at: contact.created_at
       }
+    });
+  } catch (error) {
+    logger.error('Failed to process contact form', { error, contactData });
+    throw createError('Failed to submit contact form', 500);
+  }
+});
 
-      res.json({
-        success: true,
-        data: contacts,
-        pagination: {
-          limit,
-          offset,
-          total: contacts.length
-        }
-      });
-    } catch (error) {
-      logger.error('Failed to fetch contacts', { error, query: req.query });
-      throw createError('Failed to fetch contacts', 500);
-    }
-  });
+export const getContacts = asyncHandler(async (req: Request, res: Response) => {
+  const queryParams = req.query as unknown as QueryParamsInput;
+  const { limit = 20, offset = 0, form_type } = queryParams;
 
-  getContactById = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-
-    try {
-      const contact = await this.contactRepository.findById(id);
-
-      if (!contact) {
-        throw createError('Contact not found', 404);
-      }
-
-      res.json({
-        success: true,
-        data: contact
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === 'Contact not found') {
-        throw error;
-      }
-      logger.error('Failed to fetch contact by ID', { error, contactId: id });
-      throw createError('Failed to fetch contact', 500);
-    }
-  });
-
-  getContactsByEmail = asyncHandler(async (req: Request, res: Response) => {
-    const { email } = req.params;
-
-    try {
-      const contacts = await this.contactRepository.findByEmail(email);
-
-      res.json({
-        success: true,
-        data: contacts
-      });
-    } catch (error) {
-      logger.error('Failed to fetch contacts by email', { error, email });
-      throw createError('Failed to fetch contacts', 500);
-    }
-  });
-
-  updateContact = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const { message } = req.body;
-
-    if (!message || typeof message !== 'string') {
-      throw createError('Message is required and must be a string', 400);
+  try {
+    let contacts;
+    if (form_type) {
+      contacts = await contactRepository.findByFormType(form_type, parseInt(limit.toString()));
+    } else {
+      contacts = await contactRepository.findAll(parseInt(limit.toString()), parseInt(offset.toString()));
     }
 
-    try {
-      const contact = await this.contactRepository.findById(id);
+    logger.info('Contacts retrieved successfully', { count: contacts.length, limit, offset });
 
-      if (!contact) {
-        throw createError('Contact not found', 404);
+    res.status(200).json({
+      success: true,
+      data: contacts,
+      pagination: {
+        limit: parseInt(limit.toString()),
+        offset: parseInt(offset.toString()),
+        total: contacts.length
       }
+    });
+  } catch (error) {
+    logger.error('Failed to fetch contacts', { error, queryParams });
+    throw createError('Internal server error during query validation', 500);
+  }
+});
 
-      const updatedContact = await this.contactRepository.updateMessage(id, message);
+export const getContactById = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
 
-      logger.info('Contact updated successfully', { contactId: id });
+  try {
+    const contact = await contactRepository.findById(id);
 
-      res.json({
-        success: true,
-        message: 'Contact updated successfully',
-        data: updatedContact
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === 'Contact not found') {
-        throw error;
-      }
-      logger.error('Failed to update contact', { error, contactId: id });
-      throw createError('Failed to update contact', 500);
+    if (!contact) {
+      throw createError('Contact not found', 404);
     }
-  });
 
-  deleteContact = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    logger.info('Contact retrieved successfully', { contactId: id });
 
-    try {
-      const contact = await this.contactRepository.findById(id);
+    res.status(200).json({
+      success: true,
+      data: contact
+    });
+  } catch (error) {
+    logger.error('Failed to fetch contact', { error, contactId: id });
+    const message = error instanceof Error ? error.message : 'Failed to fetch contact';
+    const statusCode = message === 'Contact not found' ? 404 : 500;
+    throw createError(message, statusCode);
+  }
+});
 
-      if (!contact) {
-        throw createError('Contact not found', 404);
-      }
+export const getContactsByEmail = asyncHandler(async (req: Request, res: Response) => {
+  const { email } = req.params;
 
-      await this.contactRepository.delete(id);
+  try {
+    const contacts = await contactRepository.findByEmail(email);
 
-      logger.info('Contact deleted successfully', { contactId: id });
+    logger.info('Contacts retrieved by email', { email, count: contacts.length });
 
-      res.json({
-        success: true,
-        message: 'Contact deleted successfully'
-      });
-    } catch (error) {
-      if (error instanceof Error && error.message === 'Contact not found') {
-        throw error;
-      }
-      logger.error('Failed to delete contact', { error, contactId: id });
-      throw createError('Failed to delete contact', 500);
+    res.status(200).json({
+      success: true,
+      data: contacts
+    });
+  } catch (error) {
+    logger.error('Failed to fetch contacts by email', { error, email });
+    throw createError('Failed to fetch contacts', 500);
+  }
+});
+
+export const updateContact = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { message } = req.body;
+
+  try {
+    // Check if contact exists
+    const existingContact = await contactRepository.findById(id);
+    if (!existingContact) {
+      throw createError('Contact not found', 404);
     }
-  });
-}
+
+    // Update the contact message
+    const updatedContact = await contactRepository.updateMessage(id, message);
+
+    logger.info('Contact updated successfully', { contactId: id });
+
+    res.status(200).json({
+      success: true,
+      message: 'Contact updated successfully',
+      data: updatedContact
+    });
+  } catch (error) {
+    logger.error('Failed to update contact', { error, contactId: id });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update contact';
+    const statusCode = errorMessage === 'Contact not found' ? 404 : 500;
+    throw createError(errorMessage, statusCode);
+  }
+});
+
+export const deleteContact = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    // Check if contact exists
+    const existingContact = await contactRepository.findById(id);
+    if (!existingContact) {
+      throw createError('Contact not found', 404);
+    }
+
+    // Delete the contact
+    await contactRepository.deleteContact(id);
+
+    logger.info('Contact deleted successfully', { contactId: id });
+
+    res.status(200).json({
+      success: true,
+      message: 'Contact deleted successfully',
+      data: null
+    });
+  } catch (error) {
+    logger.error('Failed to delete contact', { error, contactId: id });
+    const errorMessage = error instanceof Error ? error.message : 'Failed to delete contact';
+    const statusCode = errorMessage === 'Contact not found' ? 404 : 500;
+    throw createError(errorMessage, statusCode);
+  }
+});
